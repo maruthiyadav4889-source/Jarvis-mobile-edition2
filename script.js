@@ -22,7 +22,7 @@ updateEngineStatus();
 
 // API Key Setup Prompt
 apiKeyCard.addEventListener('click', () => {
-  const userKey = prompt("Enter your Google Gemini API Key (from aistudio.google.com):", apiKey);
+  const userKey = prompt("AQ.Ab8RN6Imttv9nGlI98PyZSwC8cXupe4tfkaoI3mwpgYY45WLGQ):", apiKey);
   if (userKey !== null) {
     apiKey = userKey.trim();
     localStorage.setItem('JARVIS_API_KEY', apiKey);
