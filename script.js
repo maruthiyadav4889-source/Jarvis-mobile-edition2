@@ -11,7 +11,7 @@ let apiKey = localStorage.getItem('JARVIS_API_KEY') || '';
 
 function updateEngineStatus() {
   if (apiKey) {
-    engineStatus.textContent = 'GEMINI FLASH (ACTIVE)';
+    engineStatus.textContent = 'NEURAL ENGINE (READY)';
     engineStatus.style.color = '#00f0ff';
   } else {
     engineStatus.textContent = 'SET API KEY (TAP HERE)';
@@ -20,9 +20,9 @@ function updateEngineStatus() {
 }
 updateEngineStatus();
 
-// API Key setup prompt on tap
+// API Key Setup Prompt
 apiKeyCard.addEventListener('click', () => {
-  const userKey = prompt("Enter your Google Gemini API Key (Get a free key from aistudio.google.com):", apiKey);
+  const userKey = prompt("Enter your Google Gemini API Key:", apiKey);
   if (userKey !== null) {
     apiKey = userKey.trim();
     localStorage.setItem('JARVIS_API_KEY', apiKey);
@@ -34,56 +34,68 @@ apiKeyCard.addEventListener('click', () => {
   }
 });
 
-// --- REAL AI ENGINE (Google Gemini API) ---
+// --- ROBUST AI ENGINE WITH AUTO-FALLBACK ---
 async function fetchAIResponse(userPrompt) {
   if (!apiKey) {
     return "Sir, please configure your Gemini API Key first by tapping the **AI ENGINE** card above.";
   }
 
-  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's highly intelligent AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving school/college assignments, coding, math, science, and technical problems. Use markdown for code blocks or formulas.";
+  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving school/college assignments, coding, mathematics, science, and technical problems. Use clean Markdown for code blocks or formulas.";
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // List of active model endpoints to try in order
+  const models = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-1.5-pro"
+  ];
 
   const requestBody = {
     contents: [
       {
         role: "user",
-        parts: [
-          { text: `${systemInstruction}\n\nUser Question: ${userPrompt}` }
-        ]
+        parts: [{ text: `${systemInstruction}\n\nUser Query: ${userPrompt}` }]
       }
     ],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 800
+      maxOutputTokens: 1000
     }
   };
 
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
-    });
+  let lastError = "";
 
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error?.message || "Connection refused.");
+  for (const model of models) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+          return data.candidates[0].content.parts[0].text;
+        }
+      } else {
+        const errData = await response.json();
+        lastError = errData.error?.message || response.statusText;
+      }
+    } catch (e) {
+      lastError = e.message;
     }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  } catch (error) {
-    return `Diagnostic Alert: ${error.message}`;
   }
+
+  return `Diagnostic Alert: Unable to reach neural core. ${lastError}`;
 }
 
 // --- VOICE OUTPUT (TTS) ---
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-    // Clean markdown symbols before speaking
-    const cleanText = text.replace(/[*#`_]/g, '').replace(/J\.A\.R\.V\.I\.S:/g, '').substring(0, 250);
+    const cleanText = text.replace(/[*#`_]/g, '').replace(/J\.A\.R\.V\.I\.S:/g, '').substring(0, 260);
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1.0;
     utterance.pitch = 0.9;
@@ -125,14 +137,14 @@ function stopMic() {
 
 micBtn.addEventListener('click', () => {
   if (!recognition) {
-    alert("Microphone recognition is not supported in this browser. Use Chrome on Android.");
+    alert("Microphone recognition requires Chrome on Android.");
     return;
   }
   if (!isListening) recognition.start();
   else recognition.stop();
 });
 
-// --- CHAT DISPATCHER ---
+// --- CHAT LOGIC ---
 function addMessage(sender, text, type) {
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', type);
@@ -156,11 +168,10 @@ async function handleSend() {
   userInput.value = "";
 
   liveIndicator.textContent = "PROCESSING...";
-  const loadingBubble = addMessage("J.A.R.V.I.S", "Analyzing request...", "jarvis-msg");
+  const loadingBubble = addMessage("J.A.R.V.I.S", "Analyzing directive...", "jarvis-msg");
 
   const aiReply = await fetchAIResponse(text);
   
-  // Replace loading message with full AI answer
   loadingBubble.innerHTML = `<strong>J.A.R.V.I.S:</strong> ` + (typeof marked !== 'undefined' ? marked.parse(aiReply) : aiReply);
   liveIndicator.textContent = "LIVE";
   chatFeed.scrollTop = chatFeed.scrollHeight;
