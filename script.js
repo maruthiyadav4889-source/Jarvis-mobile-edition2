@@ -6,8 +6,10 @@ const apiKeyCard = document.getElementById('apiKeyCard');
 const engineStatus = document.getElementById('engineStatus');
 const liveIndicator = document.getElementById('liveIndicator');
 
-// Load stored API Key
+// --- LOCAL STORAGE DATA ---
 let apiKey = localStorage.getItem('JARVIS_API_KEY') || '';
+let contacts = JSON.parse(localStorage.getItem('JARVIS_CONTACTS') || '{}');
+let torchStream = null;
 
 function updateEngineStatus() {
   if (apiKey) {
@@ -24,7 +26,7 @@ function updateEngineStatus() {
 }
 updateEngineStatus();
 
-// API Key Setup Prompt
+// API Key Setup
 if (apiKeyCard) {
   apiKeyCard.addEventListener('click', () => {
     const userKey = prompt("Enter your Google Gemini API Key (starts with AIzaSy...):", apiKey);
@@ -33,14 +35,146 @@ if (apiKeyCard) {
       localStorage.setItem('JARVIS_API_KEY', apiKey);
       updateEngineStatus();
       if (apiKey) {
-        addMessage("J.A.R.V.I.S", "Neural link established with Gemini 3.6 Flash. Ready for your commands, Boss.", "jarvis-msg");
-        speakText("Neural link established with Gemini 3.6 Flash. Ready for your commands, Boss.");
+        addMessage("J.A.R.V.I.S", "Neural link established with Gemini. Device bridge active, Boss.", "jarvis-msg");
+        speakText("Neural link established with Gemini. Device bridge active, Boss.");
       }
     }
   });
 }
 
-// --- GEMINI 3.6 FLASH AI ENGINE ---
+// --- HARDWARE & DEVICE CONTROLLER ---
+
+// 1. Phone Call Handler
+function triggerCall(target) {
+  let number = target.replace(/[^0-9+]/g, '');
+  
+  // Check saved contacts if no raw number provided
+  if (!number) {
+    const nameKey = target.toLowerCase().trim();
+    if (contacts[nameKey]) {
+      number = contacts[nameKey];
+    } else {
+      const askNumber = prompt(`I don't have a phone number saved for "${target}". Enter number to save:`);
+      if (askNumber) {
+        contacts[nameKey] = askNumber.trim();
+        localStorage.setItem('JARVIS_CONTACTS', JSON.stringify(contacts));
+        number = askNumber.trim();
+      }
+    }
+  }
+
+  if (number) {
+    window.location.href = `tel:${number}`;
+    return `Initiating cellular call to ${target} (${number}), Boss.`;
+  }
+  return `Cellular link aborted. No valid phone number provided for ${target}.`;
+}
+
+// 2. Battery Status
+async function getBatteryStatus() {
+  if ('getBattery' in navigator) {
+    const battery = await navigator.getBattery();
+    const level = Math.round(battery.level * 100);
+    const charging = battery.charging ? "currently charging" : "discharging";
+    return `Main power cell is at ${level}% capacity and ${charging}, Sir.`;
+  }
+  return "Battery diagnostic telemetry is unavailable on this browser.";
+}
+
+// 3. Flashlight / Torch
+async function toggleTorch(turnOn) {
+  try {
+    if (turnOn) {
+      torchStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      const track = torchStream.getVideoTracks()[0];
+      await track.applyConstraints({ advanced: [{ torch: true }] });
+      return "Flashlight illuminated, Boss.";
+    } else {
+      if (torchStream) {
+        torchStream.getTracks().forEach(track => track.stop());
+        torchStream = null;
+      }
+      return "Flashlight extinguished, Boss.";
+    }
+  } catch (err) {
+    return `Flashlight control error: ${err.message}. Camera permissions required.`;
+  }
+}
+
+// 4. Device Vibration Haptic
+function triggerVibration() {
+  if (navigator.vibrate) {
+    navigator.vibrate([150, 80, 150]);
+  }
+}
+
+// 5. System Intercept Engine
+async function executeDeviceActions(text) {
+  const q = text.toLowerCase().trim();
+
+  // Call Command: "call my wife", "call 9876543210", "call mom"
+  if (q.startsWith("call ") || q.includes("make a call to ")) {
+    const target = q.replace("make a call to ", "").replace("call to ", "").replace("call ", "").trim();
+    triggerVibration();
+    return triggerCall(target);
+  }
+
+  // Save Contact: "save contact wife 9876543210"
+  if (q.startsWith("save contact ") || q.startsWith("save number ")) {
+    const parts = q.replace("save contact ", "").replace("save number ", "").split(" ");
+    if (parts.length >= 2) {
+      const name = parts[0].toLowerCase();
+      const num = parts[1];
+      contacts[name] = num;
+      localStorage.setItem('JARVIS_CONTACTS', JSON.stringify(contacts));
+      return `Contact stored: ${name.toUpperCase()} -> ${num}.`;
+    }
+    return "Usage format: 'Save contact [name] [phone_number]'";
+  }
+
+  // WhatsApp: "open whatsapp", "send whatsapp to ..."
+  if (q.includes("whatsapp")) {
+    triggerVibration();
+    window.open("https://api.whatsapp.com/send", "_blank");
+    return "Opening WhatsApp messaging terminal, Boss.";
+  }
+
+  // Battery Diagnostic
+  if (q.includes("battery") || q.includes("power level") || q.includes("charge")) {
+    return await getBatteryStatus();
+  }
+
+  // Flashlight Commands
+  if (q.includes("turn on flashlight") || q.includes("torch on") || q.includes("light on")) {
+    return await toggleTorch(true);
+  }
+  if (q.includes("turn off flashlight") || q.includes("torch off") || q.includes("light off")) {
+    return await toggleTorch(false);
+  }
+
+  // Navigation / Maps: "navigate to bangalore", "open maps"
+  if (q.startsWith("navigate to ") || q.startsWith("directions to ")) {
+    const destination = q.replace("navigate to ", "").replace("directions to ", "");
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, "_blank");
+    return `Plotting navigation trajectory to ${destination}, Boss.`;
+  }
+
+  // Native App Openers
+  if (q.includes("open youtube")) {
+    window.open("https://www.youtube.com", "_blank");
+    return "Accessing YouTube systems, Boss.";
+  }
+  if (q.includes("open google")) {
+    window.open("https://www.google.com", "_blank");
+    return "Launching Google search protocols, Boss.";
+  }
+
+  return null; // Pass through to Gemini AI
+}
+
+// --- GEMINI AI ENGINE (For assignments, coding, chat) ---
 async function fetchAIResponse(userPrompt) {
   if (!apiKey) {
     return "Sir, please configure your Gemini API Key first by tapping the **AI ENGINE** card above.";
@@ -48,20 +182,11 @@ async function fetchAIResponse(userPrompt) {
 
   const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving school/college assignments, math calculations, coding, and general directives. Format math formulas and code clearly using clean Markdown.";
 
-  // Updated Gemini 3.6 Flash Endpoint
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: `${systemInstruction}\n\nUser Question: ${userPrompt}` }]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2048
-    }
+    contents: [{ role: "user", parts: [{ text: `${systemInstruction}\n\nUser: ${userPrompt}` }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
   };
 
   try {
@@ -72,19 +197,11 @@ async function fetchAIResponse(userPrompt) {
     });
 
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || response.statusText);
 
-    if (!response.ok) {
-      const errorMsg = data.error?.message || response.statusText;
-      return `Diagnostic Alert [${response.status}]: ${errorMsg}`;
-    }
-
-    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      return "Diagnostic Alert: Neural network returned an empty response.";
-    }
+    return data.candidates[0].content.parts[0].text;
   } catch (error) {
-    return `Diagnostic Alert (Network Offline): ${error.message}`;
+    return `Diagnostic Alert: ${error.message}`;
   }
 }
 
@@ -147,7 +264,7 @@ if (micBtn) {
   });
 }
 
-// --- CHAT MESSAGE DISPATCHER ---
+// --- CHAT PROCESSOR ---
 function addMessage(sender, text, type) {
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', type);
@@ -171,15 +288,24 @@ async function handleSend() {
   userInput.value = "";
 
   if (liveIndicator) liveIndicator.textContent = "PROCESSING...";
-  const loadingBubble = addMessage("J.A.R.V.I.S", "Analyzing request...", "jarvis-msg");
+  const loadingBubble = addMessage("J.A.R.V.I.S", "Executing directive...", "jarvis-msg");
 
-  const aiReply = await fetchAIResponse(text);
-  
-  loadingBubble.innerHTML = `<strong>J.A.R.V.I.S:</strong> ` + (typeof marked !== 'undefined' ? marked.parse(aiReply) : aiReply);
+  // Step 1: Check if it's a device hardware command
+  const deviceResult = await executeDeviceActions(text);
+
+  let finalReply = "";
+  if (deviceResult !== null) {
+    finalReply = deviceResult;
+  } else {
+    // Step 2: Fall back to Gemini AI for general knowledge/assignments
+    finalReply = await fetchAIResponse(text);
+  }
+
+  loadingBubble.innerHTML = `<strong>J.A.R.V.I.S:</strong> ` + (typeof marked !== 'undefined' ? marked.parse(finalReply) : finalReply);
   if (liveIndicator) liveIndicator.textContent = "LIVE";
   chatFeed.scrollTop = chatFeed.scrollHeight;
   
-  speakText(aiReply);
+  speakText(finalReply);
 }
 
 if (sendBtn) sendBtn.addEventListener('click', handleSend);
