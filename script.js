@@ -6,8 +6,8 @@ const apiKeyCard = document.getElementById('apiKeyCard');
 const engineStatus = document.getElementById('engineStatus');
 const liveIndicator = document.getElementById('liveIndicator');
 
+// Load stored API Key
 let apiKey = localStorage.getItem('JARVIS_API_KEY') || '';
-let activeModelName = null;
 
 function updateEngineStatus() {
   if (apiKey) {
@@ -20,71 +20,36 @@ function updateEngineStatus() {
 }
 updateEngineStatus();
 
-// API Key Setup Prompt
+// API Key Setup
 apiKeyCard.addEventListener('click', () => {
-  const userKey = prompt("AQ.Ab8RN6Imttv9nGlI98PyZSwC8cXupe4tfkaoI3mwpgYY45WLGQ):", apiKey);
+  const userKey = prompt("Enter your Google Gemini API Key (starts with AIzaSy...):", apiKey);
   if (userKey !== null) {
     apiKey = userKey.trim();
     localStorage.setItem('JARVIS_API_KEY', apiKey);
-    activeModelName = null; // reset cached model
     updateEngineStatus();
     if (apiKey) {
-      addMessage("J.A.R.V.I.S", "Neural link established. Scanning available AI models...", "jarvis-msg");
-      speakText("Neural link established. Scanning available AI models.");
+      addMessage("J.A.R.V.I.S", "Key saved. Ready for your directive, Boss.", "jarvis-msg");
+      speakText("Key saved. Ready for your directive, Boss.");
     }
   }
 });
 
-// 1. AUTO-DETECT ACTIVE MODEL FROM GOOGLE
-async function detectBestModel(key) {
-  if (activeModelName) return activeModelName;
-
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-    const data = await res.json();
-
-    if (data.models && data.models.length > 0) {
-      // Find models that support generateContent
-      const usableModels = data.models.filter(m => 
-        m.supportedGenerationMethods && 
-        m.supportedGenerationMethods.includes('generateContent')
-      );
-
-      // Prioritize flash models, then pro, then any available
-      const best = usableModels.find(m => m.name.includes('flash')) || 
-                   usableModels.find(m => m.name.includes('gemini')) || 
-                   usableModels[0];
-
-      if (best) {
-        activeModelName = best.name; // e.g. "models/gemini-2.0-flash"
-        return activeModelName;
-      }
-    }
-  } catch (e) {
-    console.warn("Auto-detect failed, using default:", e);
-  }
-
-  // Safe fallback
-  activeModelName = "models/gemini-2.0-flash";
-  return activeModelName;
-}
-
-// 2. AI GENERATION ENGINE
+// AI Direct Call
 async function fetchAIResponse(userPrompt) {
   if (!apiKey) {
     return "Sir, please configure your Gemini API Key first by tapping the **AI ENGINE** card above.";
   }
 
-  const modelPath = await detectBestModel(apiKey);
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`;
+  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving assignments, coding, mathematics, science, and technical problems. Use clean Markdown for code blocks or formulas.";
 
-  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving assignments, coding, mathematics, science, and general queries. Use markdown for code and formatting.";
+  // Standard Gemini 2.0 Flash endpoint
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
       {
         role: "user",
-        parts: [{ text: `${systemInstruction}\n\nUser: ${userPrompt}` }]
+        parts: [{ text: `${systemInstruction}\n\nUser Question: ${userPrompt}` }]
       }
     ],
     generationConfig: {
@@ -103,43 +68,21 @@ async function fetchAIResponse(userPrompt) {
     const data = await response.json();
 
     if (!response.ok) {
-      // Fallback: If 404, try legacy direct call
-      if (response.status === 404) {
-        return await fallbackDirectCall(userPrompt);
-      }
-      throw new Error(data.error?.message || response.statusText);
+      const errorMsg = data.error?.message || response.statusText;
+      return `Diagnostic Alert [${response.status}]: ${errorMsg}`;
     }
 
     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
       return data.candidates[0].content.parts[0].text;
     } else {
-      throw new Error("Empty response received from AI model.");
+      return "Diagnostic Alert: Model responded with no text content.";
     }
-
   } catch (error) {
-    return `Diagnostic Alert: ${error.message}`;
+    return `Diagnostic Alert (Network Error): ${error.message}`;
   }
 }
 
-// Direct backup fallback
-async function fallbackDirectCall(userPrompt) {
-  try {
-    const backupUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(backupUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userPrompt }] }]
-      })
-    });
-    const d = await res.json();
-    return d.candidates[0].content.parts[0].text;
-  } catch (err) {
-    return `Diagnostic Alert: Unable to connect. Please verify your API key at aistudio.google.com`;
-  }
-}
-
-// 3. VOICE OUTPUT (TTS)
+// Voice Output
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -151,7 +94,7 @@ function speakText(text) {
   }
 }
 
-// 4. VOICE INPUT (Speech Recognition)
+// Voice Input
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -192,7 +135,7 @@ micBtn.addEventListener('click', () => {
   else recognition.stop();
 });
 
-// 5. CHAT MESSAGING
+// Chat UI Handlers
 function addMessage(sender, text, type) {
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', type);
@@ -231,4 +174,3 @@ sendBtn.addEventListener('click', handleSend);
 userInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') handleSend();
 });
-
