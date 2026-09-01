@@ -11,39 +11,45 @@ let apiKey = localStorage.getItem('JARVIS_API_KEY') || '';
 
 function updateEngineStatus() {
   if (apiKey) {
-    engineStatus.textContent = 'NEURAL ENGINE (READY)';
-    engineStatus.style.color = '#00f0ff';
+    if (engineStatus) {
+      engineStatus.textContent = 'GEMINI 3.6 FLASH (ONLINE)';
+      engineStatus.style.color = '#00f0ff';
+    }
   } else {
-    engineStatus.textContent = 'SET API KEY (TAP HERE)';
-    engineStatus.style.color = '#ffaa00';
+    if (engineStatus) {
+      engineStatus.textContent = 'SET API KEY (TAP HERE)';
+      engineStatus.style.color = '#ffaa00';
+    }
   }
 }
 updateEngineStatus();
 
-// API Key Setup
-apiKeyCard.addEventListener('click', () => {
-  const userKey = prompt("Enter your Google Gemini API Key (starts with AIzaSy...):", apiKey);
-  if (userKey !== null) {
-    apiKey = userKey.trim();
-    localStorage.setItem('JARVIS_API_KEY', apiKey);
-    updateEngineStatus();
-    if (apiKey) {
-      addMessage("J.A.R.V.I.S", "Key saved. Ready for your directive, Boss.", "jarvis-msg");
-      speakText("Key saved. Ready for your directive, Boss.");
+// API Key Setup Prompt
+if (apiKeyCard) {
+  apiKeyCard.addEventListener('click', () => {
+    const userKey = prompt("Enter your Google Gemini API Key (starts with AIzaSy...):", apiKey);
+    if (userKey !== null) {
+      apiKey = userKey.trim();
+      localStorage.setItem('JARVIS_API_KEY', apiKey);
+      updateEngineStatus();
+      if (apiKey) {
+        addMessage("J.A.R.V.I.S", "Neural link established with Gemini 3.6 Flash. Ready for your commands, Boss.", "jarvis-msg");
+        speakText("Neural link established with Gemini 3.6 Flash. Ready for your commands, Boss.");
+      }
     }
-  }
-});
+  });
+}
 
-// AI Direct Call
+// --- GEMINI 3.6 FLASH AI ENGINE ---
 async function fetchAIResponse(userPrompt) {
   if (!apiKey) {
     return "Sir, please configure your Gemini API Key first by tapping the **AI ENGINE** card above.";
   }
 
-  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving assignments, coding, mathematics, science, and technical problems. Use clean Markdown for code blocks or formulas.";
+  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving school/college assignments, math calculations, coding, and general directives. Format math formulas and code clearly using clean Markdown.";
 
-  // Standard Gemini 2.0 Flash endpoint
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // Updated Gemini 3.6 Flash Endpoint
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     contents: [
@@ -54,7 +60,7 @@ async function fetchAIResponse(userPrompt) {
     ],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1000
+      maxOutputTokens: 2048
     }
   };
 
@@ -75,14 +81,14 @@ async function fetchAIResponse(userPrompt) {
     if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
       return data.candidates[0].content.parts[0].text;
     } else {
-      return "Diagnostic Alert: Model responded with no text content.";
+      return "Diagnostic Alert: Neural network returned an empty response.";
     }
   } catch (error) {
-    return `Diagnostic Alert (Network Error): ${error.message}`;
+    return `Diagnostic Alert (Network Offline): ${error.message}`;
   }
 }
 
-// Voice Output
+// --- VOICE OUTPUT (TTS) ---
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -94,7 +100,7 @@ function speakText(text) {
   }
 }
 
-// Voice Input
+// --- VOICE INPUT (Speech Recognition) ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -106,8 +112,10 @@ if (SpeechRecognition) {
 
   recognition.onstart = () => {
     isListening = true;
-    micBtn.style.background = '#ff0055';
-    micBtn.style.boxShadow = '0 0 15px #ff0055';
+    if (micBtn) {
+      micBtn.style.background = '#ff0055';
+      micBtn.style.boxShadow = '0 0 15px #ff0055';
+    }
   };
 
   recognition.onresult = (event) => {
@@ -122,20 +130,24 @@ if (SpeechRecognition) {
 
 function stopMic() {
   isListening = false;
-  micBtn.style.background = 'linear-gradient(135deg, #00f0ff, #0099aa)';
-  micBtn.style.boxShadow = '0 0 10px rgba(0, 240, 255, 0.4)';
+  if (micBtn) {
+    micBtn.style.background = 'linear-gradient(135deg, #00f0ff, #0099aa)';
+    micBtn.style.boxShadow = '0 0 10px rgba(0, 240, 255, 0.4)';
+  }
 }
 
-micBtn.addEventListener('click', () => {
-  if (!recognition) {
-    alert("Microphone recognition requires Chrome on Android.");
-    return;
-  }
-  if (!isListening) recognition.start();
-  else recognition.stop();
-});
+if (micBtn) {
+  micBtn.addEventListener('click', () => {
+    if (!recognition) {
+      alert("Microphone recognition requires Google Chrome on Android.");
+      return;
+    }
+    if (!isListening) recognition.start();
+    else recognition.stop();
+  });
+}
 
-// Chat UI Handlers
+// --- CHAT MESSAGE DISPATCHER ---
 function addMessage(sender, text, type) {
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', type);
@@ -158,19 +170,21 @@ async function handleSend() {
   addMessage("YOU", text, "user-msg");
   userInput.value = "";
 
-  liveIndicator.textContent = "PROCESSING...";
-  const loadingBubble = addMessage("J.A.R.V.I.S", "Analyzing directive...", "jarvis-msg");
+  if (liveIndicator) liveIndicator.textContent = "PROCESSING...";
+  const loadingBubble = addMessage("J.A.R.V.I.S", "Analyzing request...", "jarvis-msg");
 
   const aiReply = await fetchAIResponse(text);
   
   loadingBubble.innerHTML = `<strong>J.A.R.V.I.S:</strong> ` + (typeof marked !== 'undefined' ? marked.parse(aiReply) : aiReply);
-  liveIndicator.textContent = "LIVE";
+  if (liveIndicator) liveIndicator.textContent = "LIVE";
   chatFeed.scrollTop = chatFeed.scrollHeight;
   
   speakText(aiReply);
 }
 
-sendBtn.addEventListener('click', handleSend);
-userInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') handleSend();
-});
+if (sendBtn) sendBtn.addEventListener('click', handleSend);
+if (userInput) {
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSend();
+  });
+}
