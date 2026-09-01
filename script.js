@@ -21,19 +21,33 @@ let torchStream = null;
 // Initialize Live Battery Status
 async function initBattery() {
   if ('getBattery' in navigator) {
-    const b = await navigator.getBattery();
-    const update = () => {
-      const level = Math.round(b.level * 100);
-      if (batteryDisplay) {
-        batteryDisplay.textContent = `${level}% ${b.charging ? '(CHARGING)' : '(ONLINE)'}`;
-      }
-    };
-    update();
-    b.addEventListener('levelchange', update);
-    b.addEventListener('chargingchange', update);
+    try {
+      const b = await navigator.getBattery();
+      const update = () => {
+        const level = Math.round(b.level * 100);
+        if (batteryDisplay) {
+          batteryDisplay.textContent = `${level}% ${b.charging ? '(CHARGING)' : '(ONLINE)'}`;
+        }
+      };
+      update();
+      b.addEventListener('levelchange', update);
+      b.addEventListener('chargingchange', update);
+    } catch (e) {}
   }
 }
 initBattery();
+
+function updateEngineStatus() {
+  if (!engineStatus) return;
+  if (apiKey && apiKey.startsWith('AIza')) {
+    engineStatus.textContent = 'GEMINI 3.6 FLASH (ONLINE)';
+    engineStatus.style.color = '#00f0ff';
+  } else {
+    engineStatus.textContent = 'TAP TO CONFIGURE';
+    engineStatus.style.color = '#ffaa00';
+  }
+}
+updateEngineStatus();
 
 // API Key Setup
 if (apiKeyCard) {
@@ -42,7 +56,11 @@ if (apiKeyCard) {
     if (key !== null) {
       apiKey = key.trim();
       localStorage.setItem('JARVIS_API_KEY', apiKey);
-      alert(apiKey ? "Neural link configured." : "API Key cleared.");
+      updateEngineStatus();
+      if (apiKey) {
+        addMessage("J.A.R.V.I.S", "Neural link established with Gemini. Ready for your directives, Boss.", "jarvis-msg");
+        speakText("Neural link established with Gemini. Ready for your directives, Boss.");
+      }
     }
   });
 }
@@ -85,7 +103,34 @@ if (removeImageBtn) {
   });
 }
 
-// --- HARDWARE & DEVICE PROTOCOLS ---
+// --- 1. INSTANT LOCAL MATH & CALCULATOR (100% Offline) ---
+function solveMathExpression(text) {
+  let clean = text.toLowerCase()
+    .replace(/tell|what is|calculate|solve|evaluate|find|value of/gi, '')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/,/g, '')
+    .trim();
+
+  // Convert patterns like "21 x 342" to "21 * 342"
+  clean = clean.replace(/(\d+)\s*[xX]\s*(\d+)/g, '$1 * $2');
+
+  // Validate math-only characters
+  if (/^[\d+\-*/().\s^%]+$/.test(clean) && /\d/.test(clean)) {
+    try {
+      const sanitized = clean.replace(/\^/g, '**');
+      const result = Function(`'use strict'; return (${sanitized})`)();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        return `Calculation complete, Sir: **${clean.replace(/\*/g, '×')} = ${result.toLocaleString()}**`;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+// --- 2. HARDWARE & DEVICE PROTOCOLS ---
 function triggerCall(target) {
   let num = target.replace(/[^0-9+]/g, '');
   const key = target.toLowerCase().trim();
@@ -93,7 +138,7 @@ function triggerCall(target) {
   if (!num && contacts[key]) {
     num = contacts[key];
   } else if (!num) {
-    const ask = prompt(`No phone number saved for "${target}". Enter number:`);
+    const ask = prompt(`No phone number saved for "${target}". Enter phone number:`);
     if (ask) {
       contacts[key] = ask.trim();
       localStorage.setItem('JARVIS_CONTACTS', JSON.stringify(contacts));
@@ -103,9 +148,9 @@ function triggerCall(target) {
 
   if (num) {
     window.location.href = `tel:${num}`;
-    return `Initiating cellular link to ${target} (${num}), Boss.`;
+    return `Initiating call to ${target} (${num}), Boss.`;
   }
-  return `Aborted. Valid number required for ${target}.`;
+  return `Cellular link aborted. Valid number required for ${target}.`;
 }
 
 async function toggleTorch(enable) {
@@ -123,7 +168,7 @@ async function toggleTorch(enable) {
       return "Flashlight extinguished, Boss.";
     }
   } catch (err) {
-    return `Hardware error: ${err.message}. Camera permissions required.`;
+    return `Hardware error: ${err.message}. Camera permission required.`;
   }
 }
 
@@ -147,11 +192,17 @@ function getLiveLocation() {
 async function handleDeviceActions(text) {
   const q = text.toLowerCase().trim();
 
+  // Instant local math check first
+  const mathOutput = solveMathExpression(text);
+  if (mathOutput !== null) return mathOutput;
+
+  // Phone Calling
   if (q.startsWith("call ") || q.startsWith("dial ")) {
     const target = q.replace("call ", "").replace("dial ", "").replace("to ", "").trim();
     return triggerCall(target);
   }
 
+  // Save Contact
   if (q.startsWith("save contact ") || q.startsWith("save number ")) {
     const parts = q.replace("save contact ", "").replace("save number ", "").split(" ");
     if (parts.length >= 2) {
@@ -161,6 +212,7 @@ async function handleDeviceActions(text) {
     }
   }
 
+  // SMS
   if (q.startsWith("send sms to ") || q.startsWith("sms ")) {
     const parts = q.replace("send sms to ", "").replace("sms ", "").split(" ");
     const num = parts[0];
@@ -169,17 +221,14 @@ async function handleDeviceActions(text) {
     return `Opening SMS interface for ${num}.`;
   }
 
+  // Common Apps & Hardware
   if (q.includes("whatsapp")) {
     window.open("https://api.whatsapp.com/send", "_blank");
     return "Launching WhatsApp messaging protocol.";
   }
-
   if (q.includes("flashlight on") || q.includes("torch on")) return await toggleTorch(true);
   if (q.includes("flashlight off") || q.includes("torch off")) return await toggleTorch(false);
-
-  if (q.includes("where am i") || q.includes("my location") || q.includes("current location")) {
-    return await getLiveLocation();
-  }
+  if (q.includes("where am i") || q.includes("my location")) return await getLiveLocation();
 
   if (q.startsWith("navigate to ") || q.startsWith("directions to ")) {
     const dest = q.replace("navigate to ", "").replace("directions to ", "");
@@ -190,17 +239,17 @@ async function handleDeviceActions(text) {
   return null;
 }
 
-// --- GEMINI AI WITH RATE-LIMIT HANDLING ---
+// --- 3. GEMINI 3.6 FLASH API ENGINE ---
 async function fetchGeminiAI(userPrompt, imagePart) {
-  if (!apiKey) {
-    return "Sir, please configure your Gemini API Key by tapping the **AI ENGINE** card above.";
+  if (!apiKey || !apiKey.startsWith('AIza')) {
+    return "Sir, your **AI ENGINE** is not configured yet. Please tap the **AI ENGINE** card above and paste your Gemini API key (starts with `AIzaSy...`) to enable full AI responses.";
   }
 
-  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's AI assistant. Address the user as 'Boss' or 'Sir'. Provide clear, accurate answers for assignments, math, code, and science using clean Markdown.";
+  const systemInstruction = "You are J.A.R.V.I.S, Tony Stark's personal AI assistant. Address the user as 'Boss' or 'Sir'. Be concise, highly accurate, and proficient at solving school/college assignments, coding, math, and science. Use clean Markdown.";
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
-  const parts = [{ text: `${systemInstruction}\n\nQuestion / Directive: ${userPrompt}` }];
+  const parts = [{ text: `${systemInstruction}\n\nQuestion: ${userPrompt}` }];
   if (imagePart) parts.push(imagePart);
 
   const requestBody = {
@@ -209,26 +258,40 @@ async function fetchGeminiAI(userPrompt, imagePart) {
   };
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     const data = await response.json();
 
     if (response.status === 429) {
-      return "⚠️ **Neural Processor Cooldown**: You have reached the free tier speed limit. Please wait 15–20 seconds before your next question, Boss.";
+      return "⚠️ **Neural Processor Cooldown**: Rate limit reached. Please wait 15 seconds before sending your next request, Boss.";
     }
 
-    if (!response.ok) throw new Error(data.error?.message || `HTTP ${response.status}`);
-    return data.candidates[0].content.parts[0].text;
+    if (!response.ok) {
+      throw new Error(data.error?.message || `HTTP ${response.status}`);
+    }
+
+    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "Neural response empty, Sir.";
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return "Diagnostic Alert: Connection timed out. Please check your mobile data / Wi-Fi network.";
+    }
     return `Diagnostic Alert: ${error.message}`;
   }
 }
 
-// --- VOICE OUTPUT (TTS) ---
+// --- 4. VOICE ENGINE ---
 function speakText(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -240,7 +303,6 @@ function speakText(text) {
   }
 }
 
-// --- VOICE INPUT ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -286,7 +348,7 @@ if (micBtn) {
   });
 }
 
-// --- CHAT DISPATCHER ---
+// --- 5. CHAT MESSAGING ---
 function addMessage(sender, text, type) {
   const bubble = document.createElement('div');
   bubble.classList.add('chat-bubble', type);
@@ -320,14 +382,23 @@ async function handleSend() {
   if (liveIndicator) liveIndicator.textContent = "PROCESSING...";
   const loadingBubble = addMessage("J.A.R.V.I.S", "Executing directive...", "jarvis-msg");
 
-  let reply = await handleDeviceActions(text);
+  let reply = null;
 
-  if (reply === null) {
-    reply = await fetchGeminiAI(text, currentImage);
+  try {
+    // Check local device commands / offline math first
+    reply = await handleDeviceActions(text);
+
+    // Fall back to Gemini API only if it's not a local device command or simple math
+    if (reply === null) {
+      reply = await fetchGeminiAI(text, currentImage);
+    }
+  } catch (err) {
+    reply = `System Error: ${err.message}`;
+  } finally {
+    if (liveIndicator) liveIndicator.textContent = "LIVE";
   }
 
   loadingBubble.innerHTML = `<strong>J.A.R.V.I.S:</strong> ` + (typeof marked !== 'undefined' ? marked.parse(reply) : reply);
-  if (liveIndicator) liveIndicator.textContent = "LIVE";
   if (chatFeed) chatFeed.scrollTop = chatFeed.scrollHeight;
   
   speakText(reply);
@@ -339,3 +410,4 @@ if (userInput) {
     if (e.key === 'Enter') handleSend();
   });
     }
+    
