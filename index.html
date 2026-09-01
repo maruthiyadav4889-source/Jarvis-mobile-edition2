@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>J.A.R.V.I.S</title>
+  <title>J.A.R.V.I.S AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- Markdown parser for formatting assignments & code -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,21 +29,21 @@
       <div class="sub-title">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
     </div>
 
-    <!-- Telemetry Cards -->
+    <!-- Status Cards -->
     <div class="status-list">
       <div class="status-card">
         <span class="status-icon">⚡</span>
         <div class="status-info">
           <span class="status-label">CORE</span>
-          <span class="status-value">ONLINE</span>
+          <span class="status-value" id="coreStatus">ONLINE</span>
         </div>
       </div>
       
-      <div class="status-card">
+      <div class="status-card" id="apiKeyCard" style="cursor: pointer;" title="Tap to set API Key">
         <span class="status-icon">🧠</span>
         <div class="status-info">
           <span class="status-label">AI ENGINE</span>
-          <span class="status-value">READY</span>
+          <span class="status-value" id="engineStatus">TAP TO CONFIGURE</span>
         </div>
       </div>
 
@@ -54,33 +56,32 @@
       </div>
     </div>
 
-    <!-- Terminal & Chat Section -->
+    <!-- Terminal Panel -->
     <div class="terminal-panel">
       <div class="terminal-header">
         <span>J.A.R.V.I.S TERMINAL</span>
         <div class="live-tag">
           <div class="live-dot"></div>
-          <span>LIVE</span>
+          <span id="liveIndicator">LIVE</span>
         </div>
       </div>
 
       <!-- Feed Container -->
       <div class="chat-container" id="chatFeed">
-        <div class="chat-bubble user-msg">YOU: Help</div>
-        <div class="chat-bubble jarvis-msg">J.A.R.V.I.S: Systems online. How may I assist you, Boss?</div>
-        <div class="chat-bubble user-msg">YOU: Hello</div>
-        <div class="chat-bubble jarvis-msg">J.A.R.V.I.S: Systems online. How may I assist you, Boss?</div>
+        <div class="chat-bubble jarvis-msg">
+          <strong>J.A.R.V.I.S:</strong> All systems online. I am equipped to analyze queries, solve assignments, or execute directives. How may I assist you today, Boss?
+        </div>
       </div>
 
-      <!-- User Input Row with Voice & Send -->
+      <!-- User Input Controls -->
       <div class="input-row">
-        <input type="text" id="userInput" class="chat-input" placeholder="Ask J.A.R.V.I.S..." autocomplete="off" />
+        <input type="text" id="userInput" class="chat-input" placeholder="Ask J.A.R.V.I.S anything..." autocomplete="off" />
         <button class="action-btn" id="micBtn" title="Voice Input">
           <svg viewBox="0 0 24 24">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
           </svg>
         </button>
-        <button class="action-btn" id="sendBtn" title="Send Message">
+        <button class="action-btn" id="sendBtn" title="Send Directive">
           <svg viewBox="0 0 24 24">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
@@ -88,9 +89,8 @@
       </div>
     </div>
 
-    <!-- Sub Footer -->
     <div class="footer">
-      J.A.R.V.I.S MOBILE EDITION &middot; SYSTEM READY
+      J.A.R.V.I.S MOBILE EDITION &middot; NEURAL ENGINE ACTIVE
     </div>
 
   </div>
