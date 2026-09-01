@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>J.A.R.V.I.S Interface</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>J.A.R.V.I.S</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -72,10 +72,15 @@
         <div class="chat-bubble jarvis-msg">J.A.R.V.I.S: Systems online. How may I assist you, Boss?</div>
       </div>
 
-      <!-- User Input Row -->
+      <!-- User Input Row with Voice & Send -->
       <div class="input-row">
         <input type="text" id="userInput" class="chat-input" placeholder="Ask J.A.R.V.I.S..." autocomplete="off" />
-        <button class="send-btn" id="sendBtn" title="Send Query">
+        <button class="action-btn" id="micBtn" title="Voice Input">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+          </svg>
+        </button>
+        <button class="action-btn" id="sendBtn" title="Send Message">
           <svg viewBox="0 0 24 24">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
@@ -93,17 +98,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-<div class="input-row">
-  <input type="text" id="userInput" class="chat-input" placeholder="Ask J.A.R.V.I.S..." autocomplete="off" />
-  <button class="send-btn" id="micBtn" title="Voice Input">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="#020d12">
-      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-    </svg>
-  </button>
-  <button class="send-btn" id="sendBtn" title="Send Query">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="#020d12">
-      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-    </svg>
-  </button>
-</div>
-
