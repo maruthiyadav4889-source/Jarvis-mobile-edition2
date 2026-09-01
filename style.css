@@ -23,7 +23,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -34,9 +34,9 @@ body {
 /* --- PULSING ARC REACTOR --- */
 .arc-reactor-wrapper {
   position: relative;
-  width: 160px;
-  height: 160px;
-  margin-top: 6px;
+  width: 150px;
+  height: 150px;
+  margin-top: 4px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -50,31 +50,31 @@ body {
 }
 
 .ring-1 {
-  width: 150px;
-  height: 150px;
+  width: 140px;
+  height: 140px;
   border-style: dashed;
   animation: rotate-clockwise 18s linear infinite;
 }
 
 .ring-2 {
-  width: 120px;
-  height: 120px;
+  width: 110px;
+  height: 110px;
   border-width: 2px;
   border-color: rgba(0, 240, 255, 0.6);
   animation: pulse-glow 3s ease-in-out infinite alternate;
 }
 
 .ring-3 {
-  width: 90px;
-  height: 90px;
+  width: 80px;
+  height: 80px;
   border-width: 1.5px;
   border-style: dotted;
   animation: rotate-counter 12s linear infinite;
 }
 
 .core-center {
-  width: 65px;
-  height: 65px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: radial-gradient(circle, #00f0ff 0%, #007788 60%, #031c26 100%);
   box-shadow: 0 0 25px #00f0ff, 0 0 45px rgba(0, 240, 255, 0.4), inset 0 0 10px #ffffff;
@@ -82,7 +82,7 @@ body {
   justify-content: center;
   align-items: center;
   font-family: 'Orbitron', sans-serif;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
   color: #02080b;
 }
@@ -99,11 +99,11 @@ body {
   letter-spacing: 6px;
   color: #00f0ff;
   text-shadow: 0 0 14px rgba(0, 240, 255, 0.8);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .sub-title {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 1.5px;
   color: rgba(0, 240, 255, 0.65);
@@ -127,6 +127,11 @@ body {
   align-items: center;
   gap: 12px;
   backdrop-filter: blur(8px);
+  transition: border-color 0.2s;
+}
+
+.status-card:active {
+  border-color: #00f0ff;
 }
 
 .status-icon {
@@ -145,16 +150,16 @@ body {
 
 .status-label {
   font-family: 'Orbitron', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   color: #e0faff;
 }
 
 .status-value {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   color: #00f0ff;
 }
 
@@ -199,23 +204,24 @@ body {
   animation: blink 1.4s ease-in-out infinite;
 }
 
-/* --- CHAT FEED --- */
+/* --- CHAT FEED & FORMATTING --- */
 .chat-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  min-height: 150px;
+  gap: 10px;
+  max-height: 280px;
+  min-height: 180px;
   overflow-y: auto;
   padding-right: 2px;
+  user-select: text;
 }
 
 .chat-bubble {
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 500;
   word-break: break-word;
 }
 
@@ -235,8 +241,30 @@ body {
   color: #ffffff;
   text-align: left;
   align-self: flex-start;
-  max-width: 95%;
+  max-width: 96%;
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+.jarvis-msg code {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #00f0ff;
+}
+
+.jarvis-msg pre {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 6px 0;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+}
+
+.jarvis-msg ul, .jarvis-msg ol {
+  margin-left: 18px;
+  margin-top: 4px;
 }
 
 /* --- INPUT CONTROLS --- */
@@ -295,20 +323,8 @@ body {
   text-align: center;
 }
 
-/* Animations */
-@keyframes rotate-clockwise {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes rotate-counter {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
-}
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); }
-  100% { box-shadow: 0 0 20px rgba(0, 240, 255, 0.5); }
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
+@keyframes rotate-clockwise { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes rotate-counter { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+@keyframes pulse-glow { 0% { box-shadow: 0 0 8px rgba(0, 240, 255, 0.2); } 100% { box-shadow: 0 0 20px rgba(0, 240, 255, 0.5); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+  
